@@ -1,0 +1,131 @@
+﻿@typeparam TItem
+
+<div class="dynamic-listbox" style="@ContainerStyle" role="listbox" tabindex="0" aria-multiselectable="false">
+    <ul class="listbox-list" style="@ListStyle" role="listbox" aria-label="Dynamic List Box">
+        @if (UseChildContent)
+        {
+            @ChildContent
+        }
+        else
+        {
+            if (Items != null)
+            {
+                foreach (var item in Items)
+                {
+                    var isSelected = SelectedItemSelector?.Invoke(item).Equals(SelectedValue) ?? false;
+                    var isBeingRemoved = _removingItem != null && SelectedValue?.Equals(SelectedValueSelector(_removingItem)) == true && SelectedValueSelector(_removingItem).Equals(SelectedValueSelector(item));
+                    <DynamicListBoxItem TItem="TItem"
+                                        Item="item"
+                                        IsSelected="isSelected"
+                                        IsBeingRemoved="isBeingRemoved"
+                                        Selected="OnItemSelected">
+                        @ItemTemplate(item)
+                    </DynamicListBoxItem>
+                }
+            }
+        }
+    </ul>
+</div>
+
+@code {
+    private TItem? _removingItem;
+
+    /// <summary>
+    /// List of items to render when not using ChildContent.
+    /// </summary>
+    [Parameter]
+    public IList<TItem>? Items { get; set; }
+
+    /// <summary>
+    /// If using declarative items, the ChildContent allows defining DynamicListBoxItem components manually.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Flag indicating if ChildContent is used (items defined declaratively).
+    /// </summary>
+    private bool UseChildContent => ChildContent != null;
+
+    /// <summary>
+    /// SelectedValue parameter two-way bound.
+    /// </summary>
+    [Parameter]
+    public object? SelectedValue { get; set; }
+
+    [Parameter]
+    public EventCallback<object?> SelectedValueChanged { get; set; }
+
+    /// <summary>
+    /// Delegate to select the value from an item. Required for data-bound Items list management.
+    /// </summary>
+    [Parameter]
+    public Func<TItem, object>? SelectedValueSelector { get; set; }
+
+    /// <summary>
+    /// Delegate to select if the item equal to bound selected value.
+    /// </summary>
+    [Parameter]
+    public Func<TItem, object?>? SelectedItemSelector { get; set; }
+
+    /// <summary>
+    /// Render fragment to display an item.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<TItem> ItemTemplate { get; set; } = default!;
+
+    /// <summary>
+    /// Width CSS or px value (e.g. "280px" or "20em").
+    /// </summary>
+    [Parameter]
+    public string Width { get; set; } = "300px";
+
+    /// <summary>
+    /// Height CSS or px value (e.g. "400px" or "30em").
+    /// </summary>
+    [Parameter]
+    public string Height { get; set; } = "350px";
+
+    private string ContainerStyle => $"width:{Width}; height:{Height}; border: 1px solid #888; border-radius: 4px; padding: 0; overflow: hidden;";
+
+    private string ListStyle => $"height: 100%; margin: 0; padding-left: 0; list-style: none; overflow-y: auto; outline: none;";
+
+    private async Task OnItemSelected(TItem item)
+    {
+        if (SelectedValueSelector is null)
+        {
+            // Items and SelectedValueSelector should be set together, else can't identify selection changes.
+            return;
+        }
+
+        var newSelectedVal = SelectedValueSelector(item);
+        if (!object.Equals(newSelectedVal, SelectedValue))
+        {
+            SelectedValue = newSelectedVal;
+            await SelectedValueChanged.InvokeAsync(SelectedValue);
+        }
+    }
+
+    public async Task RemoveSelectedItemAsync()
+    {
+        if (Items == null || SelectedValue == null || SelectedValueSelector == null)
+            return;
+
+        var foundItem = Items.FirstOrDefault(x => SelectedValueSelector(x).Equals(SelectedValue));
+        if (foundItem != null)
+        {
+            _removingItem = foundItem;
+            StateHasChanged();
+
+            await Task.Delay(1000); // 1 second delay to show visual feedback
+
+            Items.Remove(foundItem);
+            _removingItem = default;
+
+            // Reset selection
+            SelectedValue = null;
+            await SelectedValueChanged.InvokeAsync(SelectedValue);
+            StateHasChanged();
+        }
+    }
+}

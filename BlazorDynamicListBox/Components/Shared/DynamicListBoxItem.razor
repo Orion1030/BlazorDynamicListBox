@@ -1,0 +1,47 @@
+﻿@typeparam TItem
+
+<li class="@ItemCssClass"
+    @onclick="OnClick"
+    style="user-select:none; cursor:pointer; padding:0.3rem 0.6rem;"
+    tabindex="0"
+    @onkeydown="OnKeyDown"
+    aria-selected="@IsSelectedString"
+    role="option">
+    @ChildContent
+</li>
+
+@code {
+    [Parameter, EditorRequired]
+    public TItem Item { get; set; } = default!;
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public bool IsBeingRemoved { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem> Selected { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string ItemCssClass =>
+        IsBeingRemoved ? "item-being-removed" :
+        IsSelected ? "item-selected" : "item-normal";
+
+    private string IsSelectedString => IsSelected ? "true" : "false";
+
+    private async Task OnClick()
+    {
+        await Selected.InvokeAsync(Item);
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            await Selected.InvokeAsync(Item);
+        }
+    }
+}

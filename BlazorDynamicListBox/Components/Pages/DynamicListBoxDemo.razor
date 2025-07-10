@@ -1,0 +1,102 @@
+﻿@page "/dynamiclistboxdemo"
+@using BlazorDynamicListBox.Data
+@using BlazorDynamicListBox.Models
+@using BlazorDynamicListBox.Components.Shared
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext DbContext
+
+<h3>DynamicListBox Demo</h3>
+
+<div class="demo-container" style="max-width:650px;">
+    <div style="margin-bottom:0.5rem;">
+        <input type="text" class="form-control" placeholder="New item text" @bind="NewItemText" @bind:event="oninput"
+            style="width: 300px; display:inline-block; vertical-align: middle; margin-right:12px;" />
+        <button class="btn btn-primary" @onclick="AddItemAsync" disabled="@string.IsNullOrWhiteSpace(NewItemText)">Add
+            Item</button>
+        <button class="btn btn-danger" @onclick="RemoveSelectedItemAsync" disabled="@SelectedItemId == null"
+            style="margin-left:12px;">Remove Selected</button>
+    </div>
+
+    <DynamicListBox @ref="ChildrenDynamicListBox" TItem="ListBoxItem" Items="@Items" SelectedValue="@SelectedItemId"
+        SelectedValueChanged="OnSelectedValueChanged" SelectedValueSelector="item => item.Id"
+        SelectedItemSelector="item => item.Id" ItemTemplate="ItemTemplate" Width="320px" Height="400px" />
+</div>
+
+@code {
+    private List<ListBoxItem> Items = new();
+    private int? SelectedItemId;
+    private string NewItemText = string.Empty;
+    private DynamicListBox<ListBoxItem>? ChildrenDynamicListBox;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Items = await DbContext.ListBoxItems.AsNoTracking().OrderBy(x => x.Id).ToListAsync();
+
+        if (Items.Count == 0)
+        {
+            // Insert some initial demo items if database empty
+            Items.Add(new ListBoxItem { Text = "Initial item A" });
+            Items.Add(new ListBoxItem { Text = "Initial item B" });
+            Items.Add(new ListBoxItem { Text = "Initial item C" });
+
+            // Save to DB
+            DbContext.ListBoxItems.AddRange(Items);
+            await DbContext.SaveChangesAsync();
+
+            // Reload to get Ids assigned by DB
+            Items = await DbContext.ListBoxItems.AsNoTracking().OrderBy(x => x.Id).ToListAsync();
+        }
+    }
+
+    RenderFragment<ListBoxItem> ItemTemplate => item => builder =>
+    {
+        builder.AddContent(0, item.Text);
+    };
+
+    private async Task AddItemAsync()
+    {
+        var trimmed = NewItemText.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+            return;
+
+        var newItem = new ListBoxItem { Text = trimmed };
+        DbContext.ListBoxItems.Add(newItem);
+        await DbContext.SaveChangesAsync();
+
+        // Keep Items in sync and update UI
+        Items.Add(newItem);
+        NewItemText = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task RemoveSelectedItemAsync()
+    {
+        if (SelectedItemId == null)
+            return;
+
+        var itemToRemove = Items.FirstOrDefault(i => i.Id == SelectedItemId);
+        if (itemToRemove != null)
+        {
+            if (ChildrenDynamicListBox is null)
+                return;
+
+            await ChildrenDynamicListBox.RemoveSelectedItemAsync();
+
+            // After UI delay and removal, remove from database
+            DbContext.ListBoxItems.Remove(itemToRemove);
+            await DbContext.SaveChangesAsync();
+
+            Items.Remove(itemToRemove);
+            SelectedItemId = null;
+            StateHasChanged();
+        }
+    }
+
+    private void OnSelectedValueChanged(object? val)
+    {
+        if (val is int id)
+            SelectedItemId = id;
+        else
+            SelectedItemId = null;
+    }
+}

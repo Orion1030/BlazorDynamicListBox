@@ -1,10 +1,18 @@
+using Microsoft.EntityFrameworkCore;
+using BlazorDynamicListBox.Data;
 using BlazorDynamicListBox.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add 
 // Add services to the container.
+
+// Configure EF Core with SQLite local DB
+var connStr = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=dynamiclistbox.db";
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(connStr));
 
 var app = builder.Build();
 
@@ -24,5 +32,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+
 
 app.Run();

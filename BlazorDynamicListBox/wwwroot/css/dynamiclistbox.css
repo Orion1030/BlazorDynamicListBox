@@ -1,0 +1,26 @@
+﻿.dynamic-listbox .item-normal {
+    background-color: white;
+    color: black;
+}
+
+.dynamic-listbox .item-selected {
+    background-color: #3399ff;
+    color: white;
+    font-weight: 600;
+}
+
+.dynamic-listbox .item-being-removed {
+    background-color: #0078d7; /* blue highlight */
+    color: white;
+    font-weight: 700;
+}
+
+.dynamic-listbox ul li:focus {
+    outline: 2px solid #3399ff;
+    outline-offset: -2px;
+}
+
+.dynamic-listbox ul li:hover {
+    background-color: #cce4ff;
+    cursor: pointer;
+}
