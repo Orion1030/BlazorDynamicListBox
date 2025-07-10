@@ -1,0 +1,29 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userprefs
+*.ncb
+*.sqlproj.user
+
+# Build artifacts
+bin/
+obj/
+
+# Package files
+*.nupkg
+*.nuget.props
+*.nuget.targets
+
+# Dependency files
+packages/
+node_modules/
+
+# Blazor WebAssembly specific
+wwwroot/bundle/
+wwwroot/dist/
+
+# Other common ignores
+*.log
+*.bak
+*.orig
