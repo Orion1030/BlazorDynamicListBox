@@ -24,3 +24,24 @@
     background-color: #cce4ff;
     cursor: pointer;
 }
+.dynamic-listbox {
+    font-size: 1.1rem;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.25rem 0.5rem rgba(34, 34, 34, 0.04);
+    background-color: #fff;
+    transition: outline 0.2s;
+}
+
+.dynamic-listbox:focus {
+    outline: 2px solid #67b3e5;
+    background: #f8f9fa;
+}
+
+.btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.bi {
+    font-size: 1.25rem;
+    vertical-align: text-bottom;
+}

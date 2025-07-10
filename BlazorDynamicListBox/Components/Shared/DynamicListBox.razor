@@ -1,4 +1,5 @@
 ﻿@typeparam TItem
+@using BlazorDynamicListBox.Models;
 
 <div class="dynamic-listbox" style="@ContainerStyle" role="listbox" tabindex="0" aria-multiselectable="false">
     <ul class="listbox-list" style="@ListStyle" role="listbox" aria-label="Dynamic List Box">
@@ -15,10 +16,10 @@
                     var isSelected = SelectedItemSelector?.Invoke(item).Equals(SelectedValue) ?? false;
                     var isBeingRemoved = _removingItem != null && SelectedValue?.Equals(SelectedValueSelector(_removingItem)) == true && SelectedValueSelector(_removingItem).Equals(SelectedValueSelector(item));
                     <DynamicListBoxItem TItem="TItem"
-                                        Item="item"
-                                        IsSelected="isSelected"
-                                        IsBeingRemoved="isBeingRemoved"
-                                        Selected="OnItemSelected">
+                    Item="item"
+                    IsSelected="isSelected"
+                    IsBeingRemoved="isBeingRemoved"
+                    Selected="OnItemSelected">
                         @ItemTemplate(item)
                     </DynamicListBoxItem>
                 }
@@ -104,7 +105,7 @@
             SelectedValue = newSelectedVal;
             await SelectedValueChanged.InvokeAsync(SelectedValue);
         }
-    }
+        }
 
     public async Task RemoveSelectedItemAsync()
     {
@@ -115,17 +116,17 @@
         if (foundItem != null)
         {
             _removingItem = foundItem;
-            StateHasChanged();
+        StateHasChanged();
 
-            await Task.Delay(1000); // 1 second delay to show visual feedback
+        await Task.Delay(1000); // 1 second delay to show visual feedback
 
             Items.Remove(foundItem);
-            _removingItem = default;
+        _removingItem = default;
 
-            // Reset selection
+        // Reset selection
             SelectedValue = null;
             await SelectedValueChanged.InvokeAsync(SelectedValue);
-            StateHasChanged();
+        StateHasChanged();
         }
     }
 }

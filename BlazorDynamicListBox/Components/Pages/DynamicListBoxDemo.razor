@@ -1,25 +1,27 @@
-﻿@page "/dynamiclistboxdemo"
+﻿@page "/dynamic-listbox-demo"
 @using BlazorDynamicListBox.Data
 @using BlazorDynamicListBox.Models
 @using BlazorDynamicListBox.Components.Shared
 @using Microsoft.EntityFrameworkCore
 @inject AppDbContext DbContext
+@rendermode InteractiveServer
 
 <h3>DynamicListBox Demo</h3>
 
 <div class="demo-container" style="max-width:650px;">
     <div style="margin-bottom:0.5rem;">
         <input type="text" class="form-control" placeholder="New item text" @bind="NewItemText" @bind:event="oninput"
-            style="width: 300px; display:inline-block; vertical-align: middle; margin-right:12px;" />
-        <button class="btn btn-primary" @onclick="AddItemAsync" disabled="@string.IsNullOrWhiteSpace(NewItemText)">Add
-            Item</button>
-        <button class="btn btn-danger" @onclick="RemoveSelectedItemAsync" disabled="@SelectedItemId == null"
-            style="margin-left:12px;">Remove Selected</button>
+        style="width: 300px; display:inline-block; vertical-align: middle; margin-right:12px;" />
+        <button class="btn btn-primary" onclick="@AddItemAsync" disabled="@IsAddButtonDisabled">
+            Add Item @if (isAdding) { <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>} </button>
+        <button class="btn btn-danger" onclick="@RemoveSelectedItemAsync" disabled="@(SelectedItemId == null)"
+        style="margin-left:12px;"> Remove Selected  @if (isRemoving) { <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>}
+        </button>
     </div>
 
     <DynamicListBox @ref="ChildrenDynamicListBox" TItem="ListBoxItem" Items="@Items" SelectedValue="@SelectedItemId"
         SelectedValueChanged="OnSelectedValueChanged" SelectedValueSelector="item => item.Id"
-        SelectedItemSelector="item => item.Id" ItemTemplate="ItemTemplate" Width="320px" Height="400px" />
+    SelectedItemSelector="item => item.Id" ItemTemplate="ItemTemplate" Width="320px" Height="400px" />
 </div>
 
 @code {
@@ -27,6 +29,7 @@
     private int? SelectedItemId;
     private string NewItemText = string.Empty;
     private DynamicListBox<ListBoxItem>? ChildrenDynamicListBox;
+    private HashSet<int> SelectedItemIdSet = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -53,20 +56,33 @@
         builder.AddContent(0, item.Text);
     };
 
+    private bool isRemoving;
+    private bool isAdding;
+    private bool IsAddButtonDisabled => string.IsNullOrWhiteSpace(NewItemText);
     private async Task AddItemAsync()
     {
         var trimmed = NewItemText.Trim();
         if (string.IsNullOrEmpty(trimmed))
             return;
+        try
+        {
+            isAdding = true;
+            var newItem = new ListBoxItem { Text = trimmed };
+            DbContext.ListBoxItems.Add(newItem);
+            await DbContext.SaveChangesAsync();
 
-        var newItem = new ListBoxItem { Text = trimmed };
-        DbContext.ListBoxItems.Add(newItem);
-        await DbContext.SaveChangesAsync();
-
-        // Keep Items in sync and update UI
-        Items.Add(newItem);
-        NewItemText = string.Empty;
-        StateHasChanged();
+            Items.Add(newItem);
+            NewItemText = string.Empty;
+            StateHasChanged();
+        }
+        catch(Exception)
+        {
+            Console.WriteLine("Error adding item to database.");
+        }
+        finally
+        {
+            isAdding = false;
+        }
     }
 
     private async Task RemoveSelectedItemAsync()
@@ -75,20 +91,29 @@
             return;
 
         var itemToRemove = Items.FirstOrDefault(i => i.Id == SelectedItemId);
-        if (itemToRemove != null)
-        {
-            if (ChildrenDynamicListBox is null)
-                return;
 
+        if (ChildrenDynamicListBox is null)
+            return;
+
+        try
+        {
+            this.isRemoving = true;
             await ChildrenDynamicListBox.RemoveSelectedItemAsync();
 
-            // After UI delay and removal, remove from database
             DbContext.ListBoxItems.Remove(itemToRemove);
             await DbContext.SaveChangesAsync();
 
             Items.Remove(itemToRemove);
-            SelectedItemId = null;
+            SelectedItemIdSet.Remove(itemToRemove.Id);
             StateHasChanged();
+        }
+        catch (Exception)
+        {
+            Console.WriteLine("Error removing item from database.");
+        }
+        finally
+        {
+            this.isRemoving = false;
         }
     }
 
